@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暮丘 Muciou — 線上訂購</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFAF8; --surface: #F3F2EF; --border: #E0DDD8;
+    --text: #1C1A17; --text2: #77746E; --text3: #B2AFA9;
+    --accent: #2E2C29; --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 15px; }
+
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(250,250,248,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-brand { font-family: var(--serif); font-size: 1.2rem; font-weight: 400; letter-spacing: 0.2em; }
+  .tab-nav { display: flex; border: 1px solid var(--border); }
+  .tab-btn {
+    font-family: var(--sans); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.5rem 1.25rem; border: none; background: transparent;
+    color: var(--text2); cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--accent); color: var(--bg); }
+
+  /* ORDER FORM */
+  .order-page { max-width: 660px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+  .form-section { margin-bottom: 2.5rem; }
+  .section-title {
+    font-family: var(--serif); font-size: 1.4rem; font-weight: 400;
+    margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+  }
+  .field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+  .field label { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text2); }
+  .field input, .field select {
+    font-family: var(--sans); font-size: 14px; font-weight: 300; color: var(--text);
+    background: transparent; border: none; border-bottom: 1px solid var(--border);
+    padding: 0.6rem 0; outline: none; transition: border-color 0.2s; -webkit-appearance: none;
+  }
+  .field select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23B2AFA9' stroke-width='1.2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 4px center; padding-right: 1.5rem;
+  }
+  .field input:focus, .field select:focus { border-color: var(--text); }
+  .field input::placeholder { color: var(--text3); }
+  .name-row { display: grid; grid-template-columns: 1fr 110px; gap: 0.75rem; align-items: end; }
+
+  /* PRODUCTS */
+  .product-group { margin-bottom: 1rem; border: 1px solid var(--border); }
+  .product-group-header {
+    padding: 0.85rem 1.25rem; background: var(--surface);
+    font-family: var(--serif); font-size: 1.1rem; font-weight: 400;
+    border-bottom: 1px solid var(--border);
+  }
+  .product-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.8rem 1.25rem; border-bottom: 1px solid var(--border);
+  }
+  .product-row:last-child { border-bottom: none; }
+  .product-info { display: flex; align-items: center; gap: 1rem; }
+  .product-size { font-size: 13px; color: var(--text2); min-width: 35px; }
+  .product-price { font-size: 13px; color: var(--text3); }
+  .qty-control { display: flex; align-items: center; border: 1px solid var(--border); }
+  .qty-btn {
+    width: 32px; height: 32px; border: none; background: transparent;
+    font-size: 16px; cursor: pointer; color: var(--text2);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .qty-btn:hover { background: var(--surface); }
+  .qty-num {
+    width: 36px; height: 32px; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+  }
+
+  /* ADDONS */
+  .addon-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.85rem 1.25rem; border: 1px solid var(--border); margin-bottom: 0.5rem;
+  }
+  .addon-name { font-size: 14px; color: var(--text); }
+  .addon-price { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* SUMMARY */
+  .order-summary { background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; margin-bottom: 1.25rem; }
+  .summary-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text2); padding: 0.3rem 0; }
+  .summary-total {
+    display: flex; justify-content: space-between;
+    font-family: var(--serif); font-size: 1.3rem; color: var(--text);
+    padding-top: 0.75rem; margin-top: 0.75rem; border-top: 1px solid var(--border);
+  }
+  .btn-submit {
+    width: 100%; font-family: var(--sans); font-size: 12px; font-weight: 500;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--bg); background: var(--accent); border: none;
+    padding: 1.1rem; cursor: pointer; transition: background 0.2s;
+  }
+  .btn-submit:hover { background: var(--text); }
+  .btn-submit:disabled { background: var(--text3); cursor: not-allowed; }
+  .error-msg { font-size: 12px; color: #c0392b; margin-top: 0.5rem; display: none; }
+
+  /* SUCCESS */
+  .overlay { position: fixed; inset: 0; background: rgba(250,250,248,0.97); display: flex; align-items: center; justify-content: center; z-index: 300; }
+  .success-box { text-align: center; max-width: 340px; padding: 2rem; }
+  .success-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .success-title { font-family: var(--serif); font-size: 1.8rem; margin-bottom: 0.75rem; }
+  .success-msg { font-size: 13px; font-weight: 300; color: var(--text2); line-height: 2; margin-bottom: 1.5rem; white-space: pre-line; }
+  .success-btn { font-family: var(--sans); font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bg); background: var(--accent); border: none; padding: 0.75rem 2rem; cursor: pointer; }
+
+  /* ADMIN */
+  .pw-overlay { position: fixed; inset: 0; background: rgba(250,250,248,0.97); display: flex; align-items: center; justify-content: center; z-index: 200; }
+  .pw-box { text-align: center; width: 300px; }
+  .pw-title { font-family: var(--serif); font-size: 1.5rem; margin-bottom: 1.5rem; }
+  .pw-input { width: 100%; font-family: var(--sans); font-size: 14px; color: var(--text); background: transparent; border: none; border-bottom: 1px solid var(--border); padding: 0.6rem 0; outline: none; text-align: center; margin-bottom: 1rem; }
+  .pw-btn { font-family: var(--sans); font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bg); background: var(--accent); border: none; padding: 0.75rem 2rem; cursor: pointer; }
+  .pw-error { font-size: 12px; color: #c0392b; margin-top: 0.5rem; display: none; }
+
+  .admin-page { padding: 2rem 1.5rem; }
+  .stats-bar { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1rem 1.5rem; background: var(--surface); border: 1px solid var(--border); }
+  .stat-item { display: flex; flex-direction: column; gap: 0.2rem; }
+  .stat-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
+  .stat-value { font-family: var(--serif); font-size: 1.5rem; font-weight: 400; color: var(--text); }
+
+  .admin-filters { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
+  .filter-group { display: flex; align-items: center; gap: 0.5rem; }
+  .filter-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); }
+  .filter-input { font-family: var(--sans); font-size: 13px; color: var(--text); background: var(--bg); border: 1px solid var(--border); padding: 0.4rem 0.75rem; outline: none; }
+  .filter-input:focus { border-color: var(--text); }
+  .filter-btn { font-family: var(--sans); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.45rem 1rem; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; }
+  .filter-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  .orders-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .orders-table th { text-align: left; padding: 0.75rem 1rem; font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); border-bottom: 2px solid var(--border); background: var(--surface); cursor: pointer; user-select: none; white-space: nowrap; }
+  .orders-table th:hover { color: var(--text); }
+  .orders-table td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+  .orders-table tr:hover td { background: var(--surface); }
+  .date-tag { display: inline-block; font-size: 11px; font-weight: 500; color: var(--text); background: var(--surface); border: 1px solid var(--border); padding: 2px 8px; white-space: nowrap; }
+  .loading { text-align: center; padding: 3rem; color: var(--text3); font-size: 13px; letter-spacing: 0.1em; }
+  .empty-state { text-align: center; padding: 3rem; color: var(--text3); font-size: 13px; }
+
+  @media (max-width: 600px) {
+    .header { padding: 0.85rem 1rem; }
+    .order-page { padding: 1.5rem 1rem; }
+    .admin-filters { flex-direction: column; align-items: flex-start; }
+    .orders-table { display: block; overflow-x: auto; white-space: nowrap; }
+  }
+
+  /* CALENDAR */
+  .cal-header { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; background:var(--surface); border-bottom:1px solid var(--border); }
+  .cal-title { font-family:var(--serif); font-size:1rem; font-weight:400; color:var(--text); }
+  .cal-nav { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text2); padding:0 6px; line-height:1; }
+  .cal-nav:hover { color:var(--text); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+  .cal-dow { text-align:center; padding:6px 0; font-size:10px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); }
+  .cal-dow.mon { color:#d0c8c0; }
+  .cal-day {
+    text-align:center; padding:9px 4px; font-size:13px;
+    cursor:pointer; border:0.5px solid transparent;
+    color:var(--text2); transition:all 0.12s;
+    position:relative;
+  }
+  .cal-day:hover:not(.disabled):not(.empty) { background:var(--surface); border-color:var(--border); }
+  .cal-day.other-month { color:var(--text3); }
+  .cal-day.disabled { color:#dbd8d3; cursor:not-allowed; background:repeating-linear-gradient(135deg,transparent,transparent 4px,#f5f3f0 4px,#f5f3f0 5px); }
+  .cal-day.monday { color:#ccc8c2; cursor:not-allowed; background:#f7f5f2; }
+  .cal-day.monday:hover { background:#f7f5f2; border-color:transparent; }
+  .cal-day.selected { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:500; }
+  .cal-day.today:not(.selected) { font-weight:600; color:var(--text); }
+  .cal-day.today:not(.selected)::after { content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--text3); }
+  .cal-selected-label { padding:0.5rem 1rem; font-size:12px; color:var(--text2); border-top:1px solid var(--border); background:var(--surface); }
+
+</style>
+</head>
+<body>
+
+<header class="header">
+  <span class="header-brand">MUCIOU</span>
+
+</header>
+
+<!-- ORDER TAB -->
+<div id="tab-order">
+  <div class="order-page">
+
+    <div class="form-section">
+      <h2 class="section-title">取貨日期</h2>
+      <div class="field">
+        <label>選擇日期</label>
+        <small style="font-size:11px;color:var(--text3);margin-bottom:8px;display:block;">最早可預訂 D+2，週一公休（灰色不可選）</small>
+        <div id="calendar-widget" style="border:1px solid var(--border);user-select:none;"></div>
+        <input type="hidden" id="orderDate">
+        <div id="date-warning" style="font-size:12px;color:#c0392b;margin-top:6px;padding:6px 10px;background:#fdf2f2;border:1px solid #f5c6cb;display:none;">⚠ 週一為公休日，無法選擇</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="section-title">顧客資料</h2>
+      <div class="name-row">
+        <div class="field" style="margin-bottom:0;">
+          <label>貴姓</label>
+          <input type="text" id="custName" placeholder="請輸入貴姓" oninput="updateSummary()">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>稱謂</label>
+          <select id="custTitle" onchange="updateSummary()">
+            <option value="先生">先生</option>
+            <option value="小姐">小姐</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top:0.75rem;">
+        <label>手機號碼</label>
+        <input type="tel" id="custPhone" placeholder="0912-345-678" oninput="updateSummary()">
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="section-title">選擇品項</h2>
+      <div id="products-container"></div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="section-title">加購區</h2>
+      <div id="addons-container"></div>
+    </div>
+
+    <div class="form-section">
+      <h2 class="section-title">訂單摘要</h2>
+      <div class="order-summary">
+        <div id="summary-items"><p style="font-size:13px;color:var(--text3);">尚未選擇品項</p></div>
+        <div class="summary-total"><span>合計</span><span id="summary-total">NT$ 0</span></div>
+      </div>
+      <button class="btn-submit" id="submit-btn" onclick="submitOrder()">確認送出訂單</button>
+      <p class="error-msg" id="submit-error"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Success overlay -->
+<div class="overlay" id="success-overlay" style="display:none;">
+  <div class="success-box">
+    <div class="success-icon">✓</div>
+    <h2 class="success-title">訂單已送出</h2>
+    <p class="success-msg" id="success-detail"></p>
+    <button class="success-btn" onclick="resetForm()">再下一筆訂單</button>
+  </div>
+</div>
+
+<script>
+// ========== 設定區（需修改）==========
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxggUJ2jhJQug_zWci-fHl5wM1U0vlGUweHBFNkS4nmr1LJpXAnqANhSMkN5HIviOtQ/exec';
+const ADMIN_PASSWORD = 'muciou2025';               // ← 可修改管理密碼
+
+// ========== 商品設定 ==========
+const PRODUCTS = [
+  { flavor: '經典原味', items: [
+    { id: 'c4', size: '4吋', price: 250 },
+    { id: 'c6', size: '6吋', price: 530 },
+  ]},
+  { flavor: '日式抹茶', items: [
+    { id: 'm4', size: '4吋', price: 250 },
+    { id: 'm6', size: '6吋', price: 530 },
+  ]},
+  { flavor: '黑巧克力', items: [
+    { id: 'k4', size: '4吋', price: 250 },
+    { id: 'k6', size: '6吋', price: 530 },
+  ]},
+];
+
+const ADDONS = [
+  { id: 'a1', name: '刀叉盤組含蠟燭', price: 10 },
+  { id: 'a2', name: '叉盤組',          price: 5  },
+];
+
+// ========== 狀態 ==========
+let cart = {};
+let addonCart = {};
+let orders = [];
+let sortKey = '取貨日期';
+let sortDir = 1;
+
+// ========== 日期工具 ==========
+function addDays(date, n) {
+  const d = new Date(date); d.setDate(d.getDate() + n); return d;
+}
+function toYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function nextValid(from, minAhead) {
+  let d = addDays(from, minAhead);
+  while (d.getDay() === 1) d = addDays(d, 1);
+  return toYMD(d);
+}
+function todayLocal() {
+  const n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+// ========== 初始化 ==========
+function init() {
+  initCalendar();
+  renderProducts();
+  renderAddons();
+  updateSummary();
+}
+
+// Calendar state
+let calYear, calMonth, calMinDate, calSelectedDate;
+
+function onDateChange() {} // kept for compatibility
+
+function initCalendar() {
+  const today = todayLocal();
+  const minStr = nextValid(today, 2);
+  calMinDate = new Date(minStr + 'T00:00:00');
+  calSelectedDate = new Date(minStr + 'T00:00:00');
+  calYear = calSelectedDate.getFullYear();
+  calMonth = calSelectedDate.getMonth();
+  document.getElementById('orderDate').value = minStr;
+  renderCalendarWidget();
+}
+
+function renderCalendarWidget() {
+  const today = todayLocal();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const dowLabels = ['日','一','二','三','四','五','六'];
+
+  let html = `
+    <div class="cal-header">
+      <button class="cal-nav" onclick="calPrev()">‹</button>
+      <span class="cal-title">${calYear} 年 ${monthNames[calMonth]}</span>
+      <button class="cal-nav" onclick="calNext()">›</button>
+    </div>
+    <div class="cal-grid">
+      ${dowLabels.map((d,i) => `<div class="cal-dow${i===1?' mon':''}">${d}</div>`).join('')}
+  `;
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    html += `<div class="cal-day empty"></div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(calYear, calMonth, d);
+    const dateStr = toYMD(date);
+    const isMonday = date.getDay() === 1;
+    const isPast = date < calMinDate;
+    const isSelected = calSelectedDate && toYMD(calSelectedDate) === dateStr;
+    const isToday = toYMD(today) === dateStr;
+
+    let cls = 'cal-day';
+    if (isMonday) cls += ' monday';
+    else if (isPast) cls += ' disabled';
+    if (isSelected && !isMonday && !isPast) cls += ' selected';
+    if (isToday) cls += ' today';
+
+    const clickable = !isMonday && !isPast;
+    html += `<div class="${cls}" ${clickable ? `onclick="selectDate('${dateStr}')"` : isMonday ? `onclick="showMondayWarn()"` : ''}>${d}</div>`;
+  }
+
+  html += `</div>`;
+  if (calSelectedDate) {
+    const sel = calSelectedDate;
+    const weekdays = ['日','一','二','三','四','五','六'];
+    html += `<div class="cal-selected-label">已選擇：${toYMD(sel)}（週${weekdays[sel.getDay()]}）</div>`;
+  }
+
+  document.getElementById('calendar-widget').innerHTML = html;
+}
+
+function selectDate(dateStr) {
+  calSelectedDate = new Date(dateStr + 'T00:00:00');
+  document.getElementById('orderDate').value = dateStr;
+  document.getElementById('date-warning').style.display = 'none';
+  renderCalendarWidget();
+  updateSummary();
+}
+
+function showMondayWarn() {
+  const w = document.getElementById('date-warning');
+  w.style.display = 'block';
+  clearTimeout(window._mondayTimer);
+  window._mondayTimer = setTimeout(() => w.style.display = 'none', 3000);
+}
+
+function calPrev() {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendarWidget();
+}
+function calNext() {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendarWidget();
+}
+
+// ========== 渲染商品 ==========
+function renderProducts() {
+  document.getElementById('products-container').innerHTML = PRODUCTS.map(g => `
+    <div class="product-group">
+      <div class="product-group-header">${g.flavor}</div>
+      ${g.items.map(item => `
+        <div class="product-row">
+          <div class="product-info">
+            <span class="product-size">${item.size}</span>
+            <span class="product-price">NT$${item.price}</span>
+          </div>
+          <div class="qty-control">
+            <button class="qty-btn" onclick="updateQty('${item.id}',-1)">−</button>
+            <span class="qty-num" id="qty-${item.id}">0</span>
+            <button class="qty-btn" onclick="updateQty('${item.id}',1)">＋</button>
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function renderAddons() {
+  document.getElementById('addons-container').innerHTML = ADDONS.map(a => `
+    <div class="addon-row">
+      <div>
+        <div class="addon-name">${a.name}</div>
+        <div class="addon-price">NT$${a.price} / 個</div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="updateAddon('${a.id}',-1)">−</button>
+        <span class="qty-num" id="addon-${a.id}">0</span>
+        <button class="qty-btn" onclick="updateAddon('${a.id}',1)">＋</button>
+      </div>
+    </div>`).join('');
+}
+
+function updateQty(id, delta) {
+  cart[id] = Math.max(0, (cart[id] || 0) + delta);
+  document.getElementById('qty-' + id).textContent = cart[id];
+  updateSummary();
+}
+function updateAddon(id, delta) {
+  addonCart[id] = Math.max(0, (addonCart[id] || 0) + delta);
+  document.getElementById('addon-' + id).textContent = addonCart[id];
+  updateSummary();
+}
+
+function getTotal() {
+  let t = 0;
+  PRODUCTS.forEach(g => g.items.forEach(i => { t += (cart[i.id]||0) * i.price; }));
+  ADDONS.forEach(a => { t += (addonCart[a.id]||0) * a.price; });
+  return t;
+}
+
+function updateSummary() {
+  const lines = [];
+  PRODUCTS.forEach(g => g.items.forEach(i => {
+    const q = cart[i.id] || 0;
+    if (q > 0) lines.push(`<div class="summary-row"><span>${g.flavor} ${i.size} × ${q}</span><span>NT$${q * i.price}</span></div>`);
+  }));
+  ADDONS.forEach(a => {
+    const q = addonCart[a.id] || 0;
+    if (q > 0) lines.push(`<div class="summary-row"><span>${a.name} × ${q}</span><span>NT$${q * a.price}</span></div>`);
+  });
+  document.getElementById('summary-items').innerHTML = lines.length
+    ? lines.join('') : '<p style="font-size:13px;color:var(--text3);">尚未選擇品項</p>';
+  document.getElementById('summary-total').textContent = 'NT$ ' + getTotal().toLocaleString();
+}
+
+// ========== 送出訂單 ==========
+async function submitOrder() {
+  const name = document.getElementById('custName').value.trim();
+  const title = document.getElementById('custTitle').value;
+  const orderDate = document.getElementById('orderDate').value;
+  const errEl = document.getElementById('submit-error');
+  errEl.style.display = 'none';
+
+  const phone = document.getElementById('custPhone').value.trim();
+  if (!name) { errEl.textContent = '請輸入貴姓'; errEl.style.display = 'block'; return; }
+  if (!phone) { errEl.textContent = '請輸入手機號碼'; errEl.style.display = 'block'; return; }
+  if (!orderDate) { errEl.textContent = '請選擇取貨日期'; errEl.style.display = 'block'; return; }
+  if (getTotal() === 0) { errEl.textContent = '請至少選擇一項商品'; errEl.style.display = 'block'; return; }
+
+  // Build display summary (for success message)
+  const itemsSummary = PRODUCTS.flatMap(g =>
+    g.items.filter(i => (cart[i.id]||0) > 0)
+      .map(i => `${g.flavor} ${i.size} ×${cart[i.id]}`)
+  ).join('、');
+
+  // Build structured data for Google Sheets
+  const data = {
+    timestamp: new Date().toLocaleString('zh-TW'),
+    orderDate, name, title, phone,
+    // 個別品項數量
+    原味4吋:  cart['c4'] || 0,
+    抹茶4吋:  cart['m4'] || 0,
+    黑巧4吋:  cart['k4'] || 0,
+    原味6吋:  cart['c6'] || 0,
+    抹茶6吋:  cart['m6'] || 0,
+    黑巧6吋:  cart['k6'] || 0,
+    // 加購
+    刀叉盤組含蠟燭: addonCart['a1'] || 0,
+    叉盤組:          addonCart['a2'] || 0,
+    total: getTotal()
+  };
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '送出中…';
+
+  try {
+    const params = new URLSearchParams();
+    params.append('data', JSON.stringify(data));
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: params });
+
+    document.getElementById('success-detail').textContent =
+      `${name} ${title}\n取貨日期：${orderDate}\n${itemsSummary}\n合計 NT$${getTotal().toLocaleString()}`;
+    document.getElementById('success-overlay').style.display = 'flex';
+  } catch(e) {
+    errEl.textContent = '送出失敗，請稍後再試';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '確認送出訂單';
+  }
+}
+
+function resetForm() {
+  cart = {}; addonCart = {};
+  document.getElementById('custName').value = '';
+  document.getElementById('success-overlay').style.display = 'none';
+  document.getElementById('submit-btn').disabled = false;
+  document.getElementById('submit-btn').textContent = '確認送出訂單';
+  renderProducts(); renderAddons(); updateSummary();
+  window.scrollTo(0, 0);
+}
+
+// ========== 分頁切換 ==========
+function switchTab(tab) {
+  document.getElementById('tab-order').style.display = tab === 'order' ? 'block' : 'none';
+  document.getElementById('tab-admin').style.display = tab === 'admin' ? 'block' : 'none';
+  if (tab === 'order') {
+    document.getElementById('tab-nav-admin').style.display = 'none';
+  }
+  if (tab === 'admin' && sessionStorage.getItem('muciou-admin') === '1') showAdminContent();
+}
+
+// ========== 管理員 ==========
+function checkPw() {
+  if (document.getElementById('pw-input').value === ADMIN_PASSWORD) {
+    sessionStorage.setItem('muciou-admin', '1');
+    showAdminContent();
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+  }
+}
+
+function showAdminContent() {
+  document.getElementById('pw-overlay').style.display = 'none';
+  document.getElementById('admin-content').style.display = 'block';
+  loadOrders();
+}
+
+async function loadOrders() {
+  document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="12" class="loading">載入中…</td></tr>';
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=get');
+    const data = await res.json();
+    orders = Array.isArray(data) ? data : [];
+    renderOrders();
+  } catch(e) {
+    document.getElementById('orders-tbody').innerHTML =
+      '<tr><td colspan="12" class="empty-state">⚠ 無法載入，請確認 Apps Script 網址已設定</td></tr>';
+  }
+}
+
+function renderOrders() {
+  const fd = document.getElementById('filter-date').value;
+  const fn = document.getElementById('filter-name').value.toLowerCase();
+  const todayStr = toYMD(todayLocal());
+
+  let filtered = orders.filter(o => {
+    if (fd && o['取貨日期'] !== fd) return false;
+    if (fn && !String(o['手機']||'').slice(-3).includes(fn)) return false;
+    return true;
+  });
+
+  filtered.sort((a, b) => {
+    const va = a[sortKey] || ''; const vb = b[sortKey] || '';
+    if (sortKey === '總金額') return (Number(va) - Number(vb)) * sortDir;
+    return va > vb ? sortDir : va < vb ? -sortDir : 0;
+  });
+
+  const totalAmt = filtered.reduce((s, o) => s + Number(o['總金額']||0), 0);
+  document.getElementById('stat-total').textContent = orders.length;
+  document.getElementById('stat-today').textContent = orders.filter(o => o['取貨日期'] === todayStr).length;
+  document.getElementById('stat-filtered').textContent = filtered.length;
+  document.getElementById('stat-amount').textContent = 'NT$' + totalAmt.toLocaleString();
+
+  if (!filtered.length) {
+    document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="12" class="empty-state">沒有符合條件的訂單</td></tr>';
+    return;
+  }
+
+  const pickedUp = JSON.parse(localStorage.getItem('muciou-pickedup') || '[]');
+  document.getElementById('orders-tbody').innerHTML = filtered.map((o, idx) => {
+    const key = o['時間戳記'] + o['姓名'];
+    const isDone = pickedUp.includes(key);
+    const rowStyle = isDone ? 'background:#EDECEA;opacity:0.6;' : '';
+    const qtyCell = (v) => {
+      const n = Number(v||0);
+      return `<td style="text-align:center;font-weight:${n>0?'500':'300'};color:${n>0?'var(--text)':'var(--text3)'};">${n>0?n:'—'}</td>`;
+    };
+    // Format date as M/D (handle both YYYY-MM-DD and ISO timestamp)
+    const rawDate = String(o['取貨日期'] || '');
+    let dateLabel = rawDate;
+    const datePart = rawDate.substring(0, 10);
+    if (datePart.match(/\d{4}-\d{2}-\d{2}/)) {
+      const parts = datePart.split('-');
+      // Add 1 day to compensate for UTC offset
+      const d = new Date(datePart + 'T12:00:00');
+      dateLabel = (d.getMonth()+1) + '/' + d.getDate();
+    }
+    return `
+    <tr style="${rowStyle}" ondblclick="togglePickup('${key.replace(/'/g, "\'")}', this)">
+      <td><span class="date-tag">${dateLabel}</span></td>
+      <td style="font-weight:400;color:var(--text);white-space:nowrap;cursor:pointer;" title="雙擊標記已取貨">${o['姓名']||''}${o['稱謂']||''}<br><small style="color:var(--text3);font-weight:300;">${highlightPhone(String(o['手機']||''), fn)}</small></td>
+      ${qtyCell(o['原味4吋'])}
+      ${qtyCell(o['抹茶4吋'])}
+      ${qtyCell(o['黑巧4吋'])}
+      ${qtyCell(o['原味6吋'])}
+      ${qtyCell(o['抹茶6吋'])}
+      ${qtyCell(o['黑巧6吋'])}
+      ${qtyCell(o['刀叉盤組含蠟燭'])}
+      ${qtyCell(o['叉盤組'])}
+      <td style="font-family:var(--serif);font-size:1rem;white-space:nowrap;">NT$${Number(o['總金額']||0).toLocaleString()}</td>
+      <td style="color:var(--text3);font-size:12px;white-space:nowrap;">${o['時間戳記']||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+let _secretCount = 0, _secretTimer;
+function secretClick() {
+  clearTimeout(_secretTimer);
+  _secretCount++;
+  if (_secretCount >= 5) {
+    _secretCount = 0;
+    document.getElementById('tab-nav-admin').style.display = 'flex';
+    switchTab('admin');
+  } else {
+    _secretTimer = setTimeout(() => _secretCount = 0, 2000);
+  }
+}
+
+function highlightPhone(phone, keyword) {
+  if (!keyword || !phone) return phone;
+  const idx = phone.lastIndexOf(keyword);
+  if (idx === -1) return phone;
+  return phone.slice(0, idx)
+    + `<mark style="background:#ffe066;color:#1C1A17;border-radius:2px;padding:0 2px;">${phone.slice(idx, idx + keyword.length)}</mark>`
+    + phone.slice(idx + keyword.length);
+}
+
+function togglePickup(key, row) {
+  let picked = JSON.parse(localStorage.getItem('muciou-pickedup') || '[]');
+  const idx = picked.indexOf(key);
+  if (idx === -1) {
+    picked.push(key);
+    row.style.background = '#EDECEA';
+    row.style.opacity = '0.6';
+  } else {
+    picked.splice(idx, 1);
+    row.style.background = '';
+    row.style.opacity = '';
+  }
+  localStorage.setItem('muciou-pickedup', JSON.stringify(picked));
+}
+
+function sortOrders(key) {
+  sortDir = sortKey === key ? -sortDir : 1;
+  sortKey = key;
+  renderOrders();
+}
+
+function clearFilters() {
+  document.getElementById('filter-date').value = '';
+  document.getElementById('filter-name').value = '';
+  renderOrders();
+}
+
+init();
+</script>
+</body>
+</html>
