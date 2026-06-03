@@ -235,6 +235,14 @@
     </div>
 
     <div class="form-section">
+      <h2 class="section-title">備註</h2>
+      <div class="field">
+        <label>特殊需求／備註</label>
+        <textarea id="custNote" placeholder="如有特殊需求請填寫…" style="font-family:var(--sans);font-size:14px;font-weight:300;color:var(--text);background:transparent;border:none;border-bottom:1px solid var(--border);padding:.6rem 0;outline:none;resize:none;height:80px;line-height:1.7;width:100%;transition:border-color .2s;" oninput="updateSummary()"></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
       <h2 class="section-title">訂單摘要</h2>
       <div class="order-summary">
         <div id="summary-items"><p style="font-size:13px;color:var(--text3);">尚未選擇品項</p></div>
@@ -491,6 +499,7 @@ async function submitOrder() {
   if (!orderDate) { errEl.textContent = '請選擇取貨日期'; errEl.style.display = 'block'; return; }
   if (getTotal() === 0) { errEl.textContent = '請至少選擇一項商品'; errEl.style.display = 'block'; return; }
 
+  const note = document.getElementById('custNote').value.trim();
   // Build display summary (for success message)
   const itemsSummary = PRODUCTS.flatMap(g =>
     g.items.filter(i => (cart[i.id]||0) > 0)
@@ -511,7 +520,8 @@ async function submitOrder() {
     // 加購
     刀叉盤組含蠟燭: addonCart['a1'] || 0,
     叉盤組:          addonCart['a2'] || 0,
-    total: getTotal()
+    total: getTotal(),
+    note: note
   };
 
   const btn = document.getElementById('submit-btn');
