@@ -260,6 +260,7 @@
     <div class="success-icon">✓</div>
     <h2 class="success-title">訂單已送出</h2>
     <p class="success-msg" id="success-detail"></p>
+    <p style="font-size:11px;color:var(--text3);margin-bottom:1.5rem;line-height:1.8;">建議截圖保存此畫面，<br>如未收到確認請透過 LINE 聯絡我們</p>
     <button class="success-btn" onclick="resetForm()">再下一筆訂單</button>
   </div>
 </div>
@@ -527,16 +528,25 @@ async function submitOrder() {
   const btn = document.getElementById('submit-btn');
   btn.disabled = true; btn.textContent = '送出中…';
 
-  try {
-    const params = new URLSearchParams();
-    params.append('data', JSON.stringify(data));
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: params });
+  // 自動重試最多 3 次
+  let success = false;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const url = SCRIPT_URL + '?data=' + encodeURIComponent(JSON.stringify(data));
+      await fetch(url, { mode: 'no-cors' });
+      success = true;
+      break;
+    } catch(e) {
+      if (i < 2) await new Promise(r => setTimeout(r, 1000));
+    }
+  }
 
+  if (success) {
     document.getElementById('success-detail').textContent =
       `${name} ${title}\n取貨日期：${orderDate}\n${itemsSummary}\n合計 NT$${getTotal().toLocaleString()}`;
     document.getElementById('success-overlay').style.display = 'flex';
-  } catch(e) {
-    errEl.textContent = '送出失敗，請稍後再試';
+  } else {
+    errEl.textContent = '網路不穩定，請截圖此頁面後再透過 LINE 聯絡我們確認訂單';
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = '確認送出訂單';
   }
