@@ -528,47 +528,45 @@ async function submitOrder() {
   const btn = document.getElementById('submit-btn');
   btn.disabled = true; btn.textContent = '送出中…';
 
-  // 用隱藏表單提交，避免 CORS 重定向問題
-  function submitViaForm(data) {
-    return new Promise((resolve) => {
-      const iframeName = 'hidden_frame_' + Date.now();
-      const iframe = document.createElement('iframe');
-      iframe.name = iframeName;
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
+  function jsonpSubmit(data) {
+    return new Promise((resolve, reject) => {
+      const cbName = 'muciou_cb_' + Date.now();
+      const script = document.createElement('script');
 
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = SCRIPT_URL;
-      form.target = iframeName;
-
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'data';
-      input.value = JSON.stringify(data);
-      form.appendChild(input);
-      document.body.appendChild(form);
-
-      iframe.onload = () => {
-        setTimeout(() => {
-          document.body.removeChild(form);
-          document.body.removeChild(iframe);
-        }, 1000);
-        resolve(true);
+      window[cbName] = function(result) {
+        delete window[cbName];
+        document.head.removeChild(script);
+        if (result.success) resolve(result);
+        else reject(new Error('伺服器錯誤'));
       };
 
-      setTimeout(() => resolve(true), 8000); // 最多等8秒
-      form.submit();
+      script.onerror = function() {
+        delete window[cbName];
+        document.head.removeChild(script);
+        reject(new Error('網路連線失敗'));
+      };
+
+      const url = SCRIPT_URL + '?callback=' + cbName + '&data=' + encodeURIComponent(JSON.stringify(data));
+      script.src = url;
+      document.head.appendChild(script);
+
+      setTimeout(() => {
+        if (window[cbName]) {
+          delete window[cbName];
+          try { document.head.removeChild(script); } catch(e) {}
+          reject(new Error('連線逾時，請檢查網路'));
+        }
+      }, 12000);
     });
   }
 
   try {
-    await submitViaForm(data);
+    await jsonpSubmit(data);
     document.getElementById('success-detail').textContent =
       `${name} ${title}\n取貨日期：${orderDate}\n${itemsSummary}\n合計 NT$${getTotal().toLocaleString()}`;
     document.getElementById('success-overlay').style.display = 'flex';
   } catch(e) {
-    errEl.textContent = '送出失敗，請截圖後透過 LINE 聯絡我們確認訂單';
+    errEl.textContent = e.message || '送出失敗，請稍後再試';
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = '確認送出訂單';
   }
