@@ -174,7 +174,7 @@
   .cal-day.disabled { color:#dbd8d3; cursor:not-allowed; background:repeating-linear-gradient(135deg,transparent,transparent 4px,#f5f3f0 4px,#f5f3f0 5px); }
   .cal-day.monday { color:#ccc8c2; cursor:not-allowed; background:#f7f5f2; }
   .cal-day.monday:hover { background:#f7f5f2; border-color:transparent; }
-  .cal-day.selected { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:500; }
+  .cal-day.selected { background:#000; color:#fff; border-color:#000; font-weight:500; }
   .cal-day.today:not(.selected) { font-weight:600; color:var(--text); }
   .cal-day.today:not(.selected)::after { content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--text3); }
   .cal-selected-label { padding:0.5rem 1rem; font-size:12px; color:var(--text2); border-top:1px solid var(--border); background:var(--surface); }
@@ -236,6 +236,10 @@
 
     <div class="form-section">
       <h2 class="section-title">備註</h2>
+      <div style="padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);margin-bottom:1.25rem;font-size:12.5px;color:var(--text2);line-height:1.9;">
+        <p style="font-weight:600;color:var(--text);margin-bottom:2px;">1. 蛋糕皆會提前製作，取貨後約可保存 2–4 天，依生產批次而定，如有送禮需求需當日製作，請在此備註。</p>
+        <p style="font-weight:600;color:var(--text);">2. 預定當日製作因製作＋冷卻定型需一定時間，最早可取貨時間為 17 點後。</p>
+      </div>
       <div class="field">
         <label>特殊需求／備註</label>
         <textarea id="custNote" placeholder="如有特殊需求請填寫…" style="font-family:var(--sans);font-size:14px;font-weight:300;color:var(--text);background:transparent;border:none;border-bottom:1px solid var(--border);padding:.6rem 0;outline:none;resize:none;height:80px;line-height:1.7;width:100%;transition:border-color .2s;" oninput="updateSummary()"></textarea>
@@ -369,17 +373,23 @@ function renderCalendarWidget() {
     const dateStr = toYMD(date);
     const isMonday = date.getDay() === 1;
     const isPast = date < calMinDate;
+    const isTuesBlocked = isTuesdayCutoffBlocked(date);
     const isSelected = calSelectedDate && toYMD(calSelectedDate) === dateStr;
     const isToday = toYMD(today) === dateStr;
 
     let cls = 'cal-day';
     if (isMonday) cls += ' monday';
-    else if (isPast) cls += ' disabled';
-    if (isSelected && !isMonday && !isPast) cls += ' selected';
+    else if (isPast || isTuesBlocked) cls += ' disabled';
+    if (isSelected && !isMonday && !isPast && !isTuesBlocked) cls += ' selected';
     if (isToday) cls += ' today';
 
-    const clickable = !isMonday && !isPast;
-    html += `<div class="${cls}" ${clickable ? `onclick="selectDate('${dateStr}')"` : isMonday ? `onclick="showMondayWarn()"` : ''}>${d}</div>`;
+    const clickable = !isMonday && !isPast && !isTuesBlocked;
+    let clickHandler = '';
+    if (clickable) clickHandler = `onclick="selectDate('${dateStr}')"`;
+    else if (isMonday) clickHandler = `onclick="showMondayWarn()"`;
+    else if (isTuesBlocked) clickHandler = `onclick="showTuesdayWarn()"`;
+
+    html += `<div class="${cls}" ${clickHandler}>${d}</div>`;
   }
 
   html += `</div>`;
@@ -392,6 +402,24 @@ function renderCalendarWidget() {
   document.getElementById('calendar-widget').innerHTML = html;
 }
 
+function isTuesdayCutoffBlocked(date) {
+  if (date.getDay() !== 2) return false; // 2 = Tuesday
+  // 該週二前一個週日 15:00 為截止時間
+  const sunday = new Date(date);
+  sunday.setDate(sunday.getDate() - 2);
+  sunday.setHours(15, 0, 0, 0);
+  return new Date() > sunday;
+}
+
+function showTuesdayWarn() {
+  const w = document.getElementById('date-warning');
+  w.textContent = '⚠ 週二取貨需於前一個週日 15:00 前完成下單，已超過截止時間';
+  w.style.display = 'block';
+  clearTimeout(window._mondayTimer);
+  clearTimeout(window._tuesTimer);
+  window._tuesTimer = setTimeout(() => w.style.display = 'none', 4000);
+}
+
 function selectDate(dateStr) {
   calSelectedDate = new Date(dateStr + 'T00:00:00');
   document.getElementById('orderDate').value = dateStr;
@@ -402,8 +430,10 @@ function selectDate(dateStr) {
 
 function showMondayWarn() {
   const w = document.getElementById('date-warning');
+  w.textContent = '⚠ 週一為公休日，無法選擇';
   w.style.display = 'block';
   clearTimeout(window._mondayTimer);
+  clearTimeout(window._tuesTimer);
   window._mondayTimer = setTimeout(() => w.style.display = 'none', 3000);
 }
 
@@ -526,6 +556,8 @@ async function submitOrder() {
   };
 
   const btn = document.getElementById('submit-btn');
+  if (btn.dataset.submitting === '1') return; // 防止重複送出
+  btn.dataset.submitting = '1';
   btn.disabled = true; btn.textContent = '送出中…';
 
   function jsonpSubmit(data) {
@@ -568,7 +600,9 @@ async function submitOrder() {
   } catch(e) {
     errEl.textContent = e.message || '送出失敗，請稍後再試';
     errEl.style.display = 'block';
-    btn.disabled = false; btn.textContent = '確認送出訂單';
+    btn.disabled = false;
+    btn.textContent = '確認送出訂單';
+    btn.dataset.submitting = '0';
   }
 }
 
