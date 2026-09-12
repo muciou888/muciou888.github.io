@@ -258,6 +258,15 @@
   </div>
 </div>
 
+<!-- Submitting overlay - blocks all interaction during submission -->
+<div class="overlay" id="submitting-overlay" style="display:none;background:rgba(250,250,248,0.85);">
+  <div style="text-align:center;">
+    <div style="width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 1rem;animation:spin 0.8s linear infinite;"></div>
+    <p style="font-size:13px;color:var(--text2);letter-spacing:0.05em;">訂單送出中，請稍候…</p>
+  </div>
+</div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
 <!-- Success overlay -->
 <div class="overlay" id="success-overlay" style="display:none;">
   <div class="success-box">
@@ -517,6 +526,10 @@ function updateSummary() {
 }
 
 // ========== 送出訂單 ==========
+function generateOrderId() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
 async function submitOrder() {
   const name = document.getElementById('custName').value.trim();
   const title = document.getElementById('custTitle').value;
@@ -524,11 +537,17 @@ async function submitOrder() {
   const errEl = document.getElementById('submit-error');
   errEl.style.display = 'none';
 
+  const btn = document.getElementById('submit-btn');
+  // 立即鎖定畫面，防止連續點擊造成重複送出
+  if (btn.dataset.submitting === '1') return;
+  btn.dataset.submitting = '1';
+  document.getElementById('submitting-overlay').style.display = 'flex';
+
   const phone = document.getElementById('custPhone').value.trim();
-  if (!name) { errEl.textContent = '請輸入貴姓'; errEl.style.display = 'block'; return; }
-  if (!phone) { errEl.textContent = '請輸入手機號碼'; errEl.style.display = 'block'; return; }
-  if (!orderDate) { errEl.textContent = '請選擇取貨日期'; errEl.style.display = 'block'; return; }
-  if (getTotal() === 0) { errEl.textContent = '請至少選擇一項商品'; errEl.style.display = 'block'; return; }
+  if (!name) { errEl.textContent = '請輸入貴姓'; errEl.style.display = 'block'; document.getElementById('submitting-overlay').style.display = 'none'; btn.dataset.submitting = '0'; return; }
+  if (!phone) { errEl.textContent = '請輸入手機號碼'; errEl.style.display = 'block'; document.getElementById('submitting-overlay').style.display = 'none'; btn.dataset.submitting = '0'; return; }
+  if (!orderDate) { errEl.textContent = '請選擇取貨日期'; errEl.style.display = 'block'; document.getElementById('submitting-overlay').style.display = 'none'; btn.dataset.submitting = '0'; return; }
+  if (getTotal() === 0) { errEl.textContent = '請至少選擇一項商品'; errEl.style.display = 'block'; document.getElementById('submitting-overlay').style.display = 'none'; btn.dataset.submitting = '0'; return; }
 
   const note = document.getElementById('custNote').value.trim();
   // Build display summary (for success message)
@@ -539,6 +558,7 @@ async function submitOrder() {
 
   // Build structured data for Google Sheets
   const data = {
+    orderId: generateOrderId(),
     timestamp: new Date().toLocaleString('zh-TW'),
     orderDate, name, title, phone,
     // 個別品項數量
@@ -554,11 +574,6 @@ async function submitOrder() {
     total: getTotal(),
     note: note
   };
-
-  const btn = document.getElementById('submit-btn');
-  if (btn.dataset.submitting === '1') return; // 防止重複送出
-  btn.dataset.submitting = '1';
-  btn.disabled = true; btn.textContent = '送出中…';
 
   function jsonpSubmit(data) {
     return new Promise((resolve, reject) => {
@@ -594,10 +609,12 @@ async function submitOrder() {
 
   try {
     await jsonpSubmit(data);
+    document.getElementById('submitting-overlay').style.display = 'none';
     document.getElementById('success-detail').textContent =
       `${name} ${title}\n取貨日期：${orderDate}\n${itemsSummary}\n合計 NT$${getTotal().toLocaleString()}`;
     document.getElementById('success-overlay').style.display = 'flex';
   } catch(e) {
+    document.getElementById('submitting-overlay').style.display = 'none';
     errEl.textContent = e.message || '送出失敗，請稍後再試';
     errEl.style.display = 'block';
     btn.disabled = false;
@@ -609,9 +626,12 @@ async function submitOrder() {
 function resetForm() {
   cart = {}; addonCart = {};
   document.getElementById('custName').value = '';
+  document.getElementById('custPhone').value = '';
+  document.getElementById('custNote').value = '';
   document.getElementById('success-overlay').style.display = 'none';
   document.getElementById('submit-btn').disabled = false;
   document.getElementById('submit-btn').textContent = '確認送出訂單';
+  document.getElementById('submit-btn').dataset.submitting = '0';
   renderProducts(); renderAddons(); updateSummary();
   window.scrollTo(0, 0);
 }
