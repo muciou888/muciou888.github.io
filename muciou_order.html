@@ -237,12 +237,26 @@
     <div class="form-section">
       <h2 class="section-title">備註</h2>
       <div style="padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);margin-bottom:1.25rem;font-size:12.5px;color:var(--text2);line-height:1.9;">
-        <p style="font-weight:600;color:var(--text);margin-bottom:2px;">1. 蛋糕皆會提前製作，取貨後約可保存 2–4 天，依生產批次而定，如有送禮需求需當日製作，請在此備註。</p>
-        <p style="font-weight:600;color:var(--text);">2. 預定當日製作因製作＋冷卻定型需一定時間，最早可取貨時間為 17 點後。</p>
+        <p style="font-weight:600;color:var(--text);margin-bottom:2px;">1. 蛋糕皆會提前製作，取貨後約可保存 2–4 天，依生產批次而定。</p>
+        <p style="font-weight:600;color:var(--text);">2. 本店有保冷袋可供替換，無保冷劑，若路途遙遠可自備保冷劑。</p>
       </div>
       <div class="field">
         <label>特殊需求／備註</label>
         <textarea id="custNote" placeholder="如有特殊需求請填寫…" style="font-family:var(--sans);font-size:14px;font-weight:300;color:var(--text);background:transparent;border:none;border-bottom:1px solid var(--border);padding:.6rem 0;outline:none;resize:none;height:80px;line-height:1.7;width:100%;transition:border-color .2s;" oninput="updateSummary()"></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;margin-bottom:0.5rem;" onclick="toggleGiftOption()">
+        <div id="gift-checkbox" style="width:18px;height:18px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:11px;color:var(--bg);">✓</div>
+        <span style="font-size:13px;color:var(--text);">是否為送禮需求</span>
+      </div>
+      <div id="gift-notice" style="display:none;padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);margin-bottom:0.75rem;font-size:12.5px;color:var(--text2);line-height:1.9;">
+        <p>我們會提供前一天或當天製作之蛋糕，最快可取貨時間為下午 3 點後。</p>
+        <div style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;margin-top:0.75rem;" onclick="toggleConsent()">
+          <div id="consent-checkbox" style="width:16px;height:16px;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:10px;color:var(--bg);">✓</div>
+          <span style="font-size:12.5px;color:var(--text);">我同意</span>
+        </div>
       </div>
     </div>
 
@@ -526,8 +540,60 @@ function updateSummary() {
 }
 
 // ========== 送出訂單 ==========
-function generateOrderId() {
-  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+let isGiftOrder = false;
+let hasConsented = false;
+
+const GIFT_TAG = '(送禮需求)';
+
+function addGiftTagToNote() {
+  const noteEl = document.getElementById('custNote');
+  if (!noteEl.value.includes(GIFT_TAG)) {
+    noteEl.value = noteEl.value ? GIFT_TAG + ' ' + noteEl.value : GIFT_TAG;
+  }
+}
+
+function removeGiftTagFromNote() {
+  const noteEl = document.getElementById('custNote');
+  noteEl.value = noteEl.value.replace(GIFT_TAG + ' ', '').replace(GIFT_TAG, '').trim();
+}
+
+function toggleGiftOption() {
+  isGiftOrder = !isGiftOrder;
+  const box = document.getElementById('gift-checkbox');
+  const notice = document.getElementById('gift-notice');
+  box.style.background = isGiftOrder ? 'var(--accent)' : 'transparent';
+  box.style.borderColor = isGiftOrder ? 'var(--accent)' : 'var(--border)';
+  notice.style.display = isGiftOrder ? 'block' : 'none';
+  if (!isGiftOrder) {
+    hasConsented = false;
+    const cbox = document.getElementById('consent-checkbox');
+    cbox.style.background = 'var(--bg)';
+    cbox.style.borderColor = 'var(--border)';
+    removeGiftTagFromNote();
+  }
+}
+
+function toggleConsent() {
+  hasConsented = !hasConsented;
+  const box = document.getElementById('consent-checkbox');
+  box.style.background = hasConsented ? 'var(--accent)' : 'var(--bg)';
+  box.style.borderColor = hasConsented ? 'var(--accent)' : 'var(--border)';
+  if (hasConsented) {
+    addGiftTagToNote();
+  } else {
+    removeGiftTagFromNote();
+  }
+}
+
+function generateOrderId(phone, orderDate, cartObj, addonObj, total) {
+  // 根據訂單內容產生固定編號：同一人、同內容、同金額 → 永遠同一組編號
+  // 這樣不管客人點擊幾次，伺服器都能辨識為同一筆訂單並擋下重複寫入
+  const raw = phone + '|' + orderDate + '|' + JSON.stringify(cartObj) + '|' + JSON.stringify(addonObj) + '|' + total;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
+  }
+  return 'ord' + Math.abs(hash).toString(36);
 }
 
 async function submitOrder() {
@@ -548,6 +614,7 @@ async function submitOrder() {
   if (!phone) { errEl.textContent = '請輸入手機號碼'; errEl.style.display = 'block'; document.getElementById('submitting-overlay').style.display = 'none'; btn.dataset.submitting = '0'; return; }
   if (!orderDate) { errEl.textContent = '請選擇取貨日期'; errEl.style.display = 'block'; document.getElementById('submitting-overlay').style.display = 'none'; btn.dataset.submitting = '0'; return; }
   if (getTotal() === 0) { errEl.textContent = '請至少選擇一項商品'; errEl.style.display = 'block'; document.getElementById('submitting-overlay').style.display = 'none'; btn.dataset.submitting = '0'; return; }
+  if (isGiftOrder && !hasConsented) { errEl.textContent = '請勾選「我同意」以確認送禮需求說明'; errEl.style.display = 'block'; document.getElementById('submitting-overlay').style.display = 'none'; btn.dataset.submitting = '0'; return; }
 
   const note = document.getElementById('custNote').value.trim();
   // Build display summary (for success message)
@@ -558,7 +625,7 @@ async function submitOrder() {
 
   // Build structured data for Google Sheets
   const data = {
-    orderId: generateOrderId(),
+    orderId: generateOrderId(phone, orderDate, cart, addonCart, getTotal()),
     timestamp: new Date().toLocaleString('zh-TW'),
     orderDate, name, title, phone,
     // 個別品項數量
@@ -632,6 +699,12 @@ function resetForm() {
   document.getElementById('submit-btn').disabled = false;
   document.getElementById('submit-btn').textContent = '確認送出訂單';
   document.getElementById('submit-btn').dataset.submitting = '0';
+  isGiftOrder = false; hasConsented = false;
+  document.getElementById('gift-checkbox').style.background = 'transparent';
+  document.getElementById('gift-checkbox').style.borderColor = 'var(--border)';
+  document.getElementById('gift-notice').style.display = 'none';
+  document.getElementById('consent-checkbox').style.background = 'var(--bg)';
+  document.getElementById('consent-checkbox').style.borderColor = 'var(--border)';
   renderProducts(); renderAddons(); updateSummary();
   window.scrollTo(0, 0);
 }
